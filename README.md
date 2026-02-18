@@ -1,16 +1,67 @@
-# React + Vite
+# Dashboard (The Car kind)
 
-This template provides a minimal setup to get React working in Vite with HMR and some ESLint rules.
+## Project overview
 
-Currently, two official plugins are available:
+This project aims to build a functioning dashboard UI that looks and behaves like a real car dashboard. The focus is on a visually accurate instrument cluster (speedometer, tachometer, fuel/temperature gauges, indicator lights) with smooth animations, responsive layout, and the ability to drive the UI from live or simulated vehicle data.
 
-- [@vitejs/plugin-react](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react) uses [Babel](https://babeljs.io/) (or [oxc](https://oxc.rs) when used in [rolldown-vite](https://vite.dev/guide/rolldown)) for Fast Refresh
-- [@vitejs/plugin-react-swc](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react-swc) uses [SWC](https://swc.rs/) for Fast Refresh
+## Goals
 
-## React Compiler
+- Create a realistic, accessible instrument cluster UI.
+- Support live data input and simulated data for development.
+- Provide day/night themes and responsive scaling for different screen sizes.
+- Keep the codebase modular and easy to extend (new gauges, warnings, or layouts).
 
-The React Compiler is not enabled on this template because of its impact on dev & build performances. To add it, see [this documentation](https://react.dev/learn/react-compiler/installation).
+## Features (planned)
 
-## Expanding the ESLint configuration
+- Animated speedometer and tachometer needles.
+- Status indicators (turn signals, high beam, warnings).
+- Digital readouts (odometer, trip, gear, clock).
+- Configurable themes (day / night) and color palettes.
+- Hooks / API surface for feeding telemetry data into the dashboard.
 
-If you are developing a production application, we recommend using TypeScript with type-aware lint rules enabled. Check out the [TS template](https://github.com/vitejs/vite/tree/main/packages/create-vite/template-react-ts) for information on how to integrate TypeScript and [`typescript-eslint`](https://typescript-eslint.io) in your project.
+## Tech stack
+
+- Vite + React + TypeScript
+- Tailwind CSS for utility-driven styling
+- PostCSS and Autoprefixer
+- Prettier for consistent formatting
+
+## Getting started
+
+Install dependencies and run the dev server:
+
+```bash
+npm install
+npm run dev
+```
+
+Type checking, formatting and build:
+
+```bash
+npx tsc --noEmit
+npm run format
+npm run build
+npm run preview
+```
+
+## Project structure (important files)
+
+- `index.html` – application entry HTML.
+- `src/main.tsx` – React entry point.
+- `src/App.tsx` – top-level app; replace or extend this with the dashboard components.
+- `src/index.css` – Tailwind + global styles.
+- `tailwind.config.cjs` and `postcss.config.cjs` – Tailwind/PostCSS configuration.
+
+## Development notes
+
+- Start by creating modular gauge components (e.g., `Speedometer`, `Tachometer`) under `src/components` and a `Telemetry` provider that supplies data to the UI.
+- Provide a simple simulator/CSS storybook page for experimenting with needle animation and transitions.
+- Consider accessibility (text alternatives, sufficient contrast, and keyboard focus) when designing indicators and controls.
+
+## Contributing
+
+Open issues or PRs for new gauges, data adapters, or visual improvements. Keep commits small and include screenshots or recordings for visual changes.
+
+## License
+
+GPL-3
