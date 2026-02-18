@@ -96,23 +96,36 @@ function Tachometer({ gear }) {
   const targetRef = useRef(0);
 
   useEffect(() => {
-    const interval = setInterval(() => {
-      const sec = new Date().getSeconds();
-      targetRef.current = (sec / 59) * 8000;
-    }, 1000);
-    return () => clearInterval(interval);
-  }, []);
-
-  useEffect(() => {
     let frame;
+
     const animate = () => {
       // Gear-dependent easing: lower gear = faster rev
-      const gearNum = parseInt(gear.replace('M', ''), 10) || 1;
-      const easeFactor = 0.12 / gearNum; // M1:0.12, M6:0.02
-      setValue((prev) => prev + (targetRef.current - prev) * easeFactor);
+      // const gearNum = parseInt(gear.replace('M', ''), 10) || 1;
+      // const easeFactor = 1 / gearNum; // M1:0.12, M6:0.02
+
+      const now = new Date();
+      const seconds = now.getSeconds();
+      const milliseconds = now.getMilliseconds();
+
+      // Calculate continuous fractional seconds (e.g. 12.345)
+      const fractionalSeconds = seconds + milliseconds / 1000;
+
+      // Map fractional seconds (0 to 59.999) to RPM (0 to 8000)
+      const baseRpm = (fractionalSeconds / 60) * 7000 + 1000;
+
+      const noise =
+        // 50 * Math.sin((fractionalSeconds * 2 * Math.PI) / 3) + // slow wave
+        (Math.random() - 0.5) * 20; // tiny random flicker
+
+      targetRef.current = baseRpm + noise;
+
+      // Smoothly approach target RPM
+      setValue((prev) => prev + (targetRef.current - prev) * 0.05);
+
       frame = requestAnimationFrame(animate);
     };
-    animate();
+
+    frame = requestAnimationFrame(animate);
     return () => cancelAnimationFrame(frame);
   }, [gear]);
 
