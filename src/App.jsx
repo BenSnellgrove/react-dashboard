@@ -1,5 +1,9 @@
 import { useEffect, useRef, useState } from 'react';
 
+/* ===========================
+   SVG MATH HELPERS
+=========================== */
+
 function polarToCartesian(cx, cy, r, angleDeg) {
   const angleRad = (angleDeg - 90) * (Math.PI / 180);
   return {
@@ -19,13 +23,61 @@ function describeArc(cx, cy, r, startAngle, endAngle) {
 const START_ANGLE = -130;
 const END_ANGLE = 130;
 
+/* ===========================
+   APP LAYOUT
+=========================== */
+
 export default function App() {
+  const [speed, setSpeed] = useState(0);
+  const [fps, setFps] = useState(0);
+  const [frameTime, setFrameTime] = useState(0);
+
   return (
     <div className="h-screen w-screen flex items-center justify-center bg-gradient-to-b from-[#0a0a0a] via-[#111] to-black text-white">
-      <div className="w-[1400px] h-[550px] rounded-3xl bg-gradient-to-b from-[#1b1b1b] to-[#0d0d0d] shadow-[0_30px_120px_rgba(0,0,0,0.9)] p-12 flex items-center justify-between">
+      <div className="w-[1600px] h-[600px] rounded-3xl bg-gradient-to-b from-[#1b1b1b] to-[#0d0d0d] shadow-[0_40px_160px_rgba(0,0,0,0.9)] p-12 flex items-center justify-between">
         <Tachometer />
 
-        <Speedometer />
+        <CenterDisplay speed={speed} fps={fps} frameTime={frameTime} />
+
+        <Speedometer setSpeed={setSpeed} setFps={setFps} setFrameTime={setFrameTime} />
+      </div>
+    </div>
+  );
+}
+
+/* ===========================
+   CENTER DISPLAY
+=========================== */
+
+function CenterDisplay({ speed, fps, frameTime }) {
+  const [time, setTime] = useState(new Date());
+  const [gear, setGear] = useState('D');
+
+  useEffect(() => {
+    const interval = setInterval(() => {
+      setTime(new Date());
+    }, 1000);
+    return () => clearInterval(interval);
+  }, []);
+
+  return (
+    <div className="w-[400px] text-center flex flex-col items-center justify-center">
+      {/* Digital Speed */}
+      <div className="text-8xl font-mono tracking-tight">{Math.round(speed)}</div>
+      <div className="text-gray-400 text-xl tracking-widest mb-8">km/h</div>
+
+      {/* Performance Stats */}
+      <div className="flex gap-10 text-gray-400 text-lg">
+        <div>{fps.toFixed(0)} FPS</div>
+        <div>{frameTime.toFixed(1)} ms</div>
+      </div>
+
+      {/* Gear Indicator */}
+      <div className="text-6xl font-semibold mt-10 tracking-widest">{gear}</div>
+
+      {/* Clock + Temp */}
+      <div className="mt-6 text-gray-500 tracking-wider">
+        {time.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })} &nbsp; • &nbsp; 21°C
       </div>
     </div>
   );
@@ -57,15 +109,15 @@ function Tachometer() {
     return () => cancelAnimationFrame(frame);
   }, []);
 
-  return <Gauge label="RPM" value={value} max={8000} redZoneStart={6000} />;
+  return <Gauge value={value} max={8000} redZoneStart={6000} />;
 }
 
 /* ===========================
    PERFORMANCE SPEEDOMETER
 =========================== */
 
-function Speedometer() {
-  const [speed, setSpeed] = useState(0);
+function Speedometer({ setSpeed, setFps, setFrameTime }) {
+  const [value, setValue] = useState(0);
   const frameTimes = useRef([]);
   const lastTime = useRef(performance.now());
 
@@ -85,10 +137,13 @@ function Speedometer() {
 
       const fps = 1000 / avg;
 
-      // Map FPS (0–60) to speed (0–320 km/h)
+      setFps(fps);
+      setFrameTime(avg);
+
       const mappedSpeed = Math.min((fps / 60) * 320, 320);
 
-      setSpeed((prev) => prev + (mappedSpeed - prev) * 0.1);
+      setValue((prev) => prev + (mappedSpeed - prev) * 0.1);
+      setSpeed(mappedSpeed);
 
       frame = requestAnimationFrame(measure);
     };
@@ -97,27 +152,26 @@ function Speedometer() {
     return () => cancelAnimationFrame(frame);
   }, []);
 
-  return <Gauge label="km/h" value={speed} max={320} redZoneStart={260} />;
+  return <Gauge value={value} max={320} redZoneStart={260} />;
 }
 
 /* ===========================
-   GENERIC GAUGE COMPONENT
+   GENERIC GAUGE
 =========================== */
 
-function Gauge({ label, value, max, redZoneStart }) {
+function Gauge({ value, max, redZoneStart }) {
   const angle = START_ANGLE + (value / max) * (END_ANGLE - START_ANGLE);
 
   return (
     <div className="relative w-[500px] h-[500px]">
       <svg viewBox="0 0 500 500" className="w-full h-full">
         <defs>
-          <linearGradient id={`grad-${label}`} x1="0%" y1="0%" x2="100%" y2="0%">
+          <linearGradient id="redGrad" x1="0%" y1="0%" x2="100%" y2="0%">
             <stop offset="0%" stopColor="#facc15" />
             <stop offset="100%" stopColor="#dc2626" />
           </linearGradient>
         </defs>
 
-        {/* Base arc */}
         <path
           d={describeArc(250, 250, 200, START_ANGLE, END_ANGLE)}
           stroke="#333"
@@ -125,7 +179,6 @@ function Gauge({ label, value, max, redZoneStart }) {
           fill="none"
         />
 
-        {/* Red zone */}
         <path
           d={describeArc(
             250,
@@ -134,32 +187,11 @@ function Gauge({ label, value, max, redZoneStart }) {
             START_ANGLE + (redZoneStart / max) * (END_ANGLE - START_ANGLE),
             END_ANGLE,
           )}
-          stroke={`url(#grad-${label})`}
+          stroke="url(#redGrad)"
           strokeWidth="20"
           fill="none"
         />
 
-        {/* Ticks */}
-        {Array.from({ length: 9 }).map((_, i) => {
-          const a = START_ANGLE + (i / 8) * (END_ANGLE - START_ANGLE);
-
-          const outer = polarToCartesian(250, 250, 210, a);
-          const inner = polarToCartesian(250, 250, 180, a);
-
-          return (
-            <line
-              key={i}
-              x1={outer.x}
-              y1={outer.y}
-              x2={inner.x}
-              y2={inner.y}
-              stroke="#aaa"
-              strokeWidth="3"
-            />
-          );
-        })}
-
-        {/* Needle */}
         <line
           x1="250"
           y1="250"
@@ -171,14 +203,8 @@ function Gauge({ label, value, max, redZoneStart }) {
           style={{ filter: 'drop-shadow(0 0 12px red)' }}
         />
 
-        {/* Hub */}
         <circle cx="250" cy="250" r="18" fill="#111" />
       </svg>
-
-      <div className="absolute inset-0 flex flex-col items-center justify-center">
-        <div className="text-6xl font-mono">{Math.round(value)}</div>
-        <div className="text-gray-400 tracking-widest mt-2">{label}</div>
-      </div>
     </div>
   );
 }
