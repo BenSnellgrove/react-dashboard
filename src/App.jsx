@@ -32,12 +32,20 @@ export default function App() {
   const [fps, setFps] = useState(0);
   const [frameTime, setFrameTime] = useState(0);
 
+  const [time, setTime] = useState(new Date());
+  useEffect(() => {
+    const interval = setInterval(() => setTime(new Date()), 1000);
+    return () => clearInterval(interval);
+  }, []);
+
+  const gear = `M${(time.getMinutes() % 6) + 1}`;
+
   return (
     <div className="h-screen w-screen flex items-center justify-center bg-gradient-to-b from-[#0a0a0a] via-[#111] to-black text-white">
       <div className="w-[1600px] h-[600px] rounded-3xl bg-gradient-to-b from-[#1b1b1b] to-[#0d0d0d] shadow-[0_40px_160px_rgba(0,0,0,0.9)] p-12 flex items-center justify-between">
-        <Tachometer />
+        <Tachometer gear={gear} />
 
-        <CenterDisplay speed={speed} fps={fps} frameTime={frameTime} />
+        <CenterDisplay gear={gear} speed={speed} fps={fps} frameTime={frameTime} />
 
         <Speedometer setSpeed={setSpeed} setFps={setFps} setFrameTime={setFrameTime} />
       </div>
@@ -49,9 +57,8 @@ export default function App() {
    CENTER DISPLAY
 =========================== */
 
-function CenterDisplay({ speed, fps, frameTime }) {
+function CenterDisplay({ gear, speed, fps, frameTime }) {
   const [time, setTime] = useState(new Date());
-  const [gear, setGear] = useState('D');
 
   useEffect(() => {
     const interval = setInterval(() => {
@@ -65,16 +72,13 @@ function CenterDisplay({ speed, fps, frameTime }) {
       {/* Digital Speed */}
       <div className="text-8xl font-mono tracking-tight">{Math.round(speed)}</div>
       <div className="text-gray-400 text-xl tracking-widest mb-8">km/h</div>
-
       {/* Performance Stats */}
       <div className="flex gap-10 text-gray-400 text-lg">
         <div>{fps.toFixed(0)} FPS</div>
         <div>{frameTime.toFixed(1)} ms</div>
       </div>
-
       {/* Gear Indicator */}
       <div className="text-6xl font-semibold mt-10 tracking-widest">{gear}</div>
-
       {/* Clock + Temp */}
       <div className="mt-6 text-gray-500 tracking-wider">
         {time.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })} &nbsp; • &nbsp; 21°C
@@ -87,7 +91,7 @@ function CenterDisplay({ speed, fps, frameTime }) {
    RPM TACHOMETER
 =========================== */
 
-function Tachometer() {
+function Tachometer({ gear }) {
   const [value, setValue] = useState(0);
   const targetRef = useRef(0);
 
@@ -102,12 +106,15 @@ function Tachometer() {
   useEffect(() => {
     let frame;
     const animate = () => {
-      setValue((prev) => prev + (targetRef.current - prev) * 0.08);
+      // Gear-dependent easing: lower gear = faster rev
+      const gearNum = parseInt(gear.replace('M', ''), 10) || 1;
+      const easeFactor = 0.12 / gearNum; // M1:0.12, M6:0.02
+      setValue((prev) => prev + (targetRef.current - prev) * easeFactor);
       frame = requestAnimationFrame(animate);
     };
     animate();
     return () => cancelAnimationFrame(frame);
-  }, []);
+  }, [gear]);
 
   return <Gauge value={value} max={8000} redZoneStart={6000} />;
 }
@@ -211,6 +218,27 @@ function Gauge({ label, value, max, redZoneStart }) {
               stroke="#aaa"
               strokeWidth="3"
             />
+          );
+        })}
+
+        {/* Tick numbers */}
+        {Array.from({ length: 9 }).map((_, i) => {
+          const a = START_ANGLE + (i / 8) * (END_ANGLE - START_ANGLE);
+          const textPos = polarToCartesian(250, 250, 150, a);
+          const labelValue = max === 8000 ? i : Math.round((i / 8) * max);
+          return (
+            <text
+              key={`num-${i}`}
+              x={textPos.x}
+              y={textPos.y}
+              fill="#ddd"
+              fontSize="20"
+              fontFamily="monospace"
+              textAnchor="middle"
+              dominantBaseline="middle"
+            >
+              {labelValue}
+            </text>
           );
         })}
 
