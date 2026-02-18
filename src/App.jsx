@@ -70,7 +70,7 @@ function CenterDisplay({ gear, speed, fps, frameTime }) {
   return (
     <div className="w-[400px] text-center flex flex-col items-center justify-center">
       {/* Digital Speed */}
-      <div className="text-8xl font-mono tracking-tight">{Math.round(speed)}</div>
+      <div className="text-8xl font-audi tracking-tight">{Math.round(speed)}</div>
       <div className="text-gray-400 text-xl tracking-widest mb-8">km/h</div>
       {/* Performance Stats */}
       <div className="flex gap-10 text-gray-400 text-lg">
@@ -233,7 +233,7 @@ function Gauge({ label, value, max, redZoneStart }) {
               y={textPos.y}
               fill="#ddd"
               fontSize="20"
-              fontFamily="monospace"
+              fontFamily="AudiFont"
               textAnchor="middle"
               dominantBaseline="middle"
             >
