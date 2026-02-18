@@ -156,22 +156,23 @@ function Speedometer({ setSpeed, setFps, setFrameTime }) {
 }
 
 /* ===========================
-   GENERIC GAUGE
+   GENERIC GAUGE COMPONENT
 =========================== */
 
-function Gauge({ value, max, redZoneStart }) {
+function Gauge({ label, value, max, redZoneStart }) {
   const angle = START_ANGLE + (value / max) * (END_ANGLE - START_ANGLE);
 
   return (
     <div className="relative w-[500px] h-[500px]">
       <svg viewBox="0 0 500 500" className="w-full h-full">
         <defs>
-          <linearGradient id="redGrad" x1="0%" y1="0%" x2="100%" y2="0%">
+          <linearGradient id={`grad-${label}`} x1="0%" y1="0%" x2="100%" y2="0%">
             <stop offset="0%" stopColor="#facc15" />
             <stop offset="100%" stopColor="#dc2626" />
           </linearGradient>
         </defs>
 
+        {/* Base arc */}
         <path
           d={describeArc(250, 250, 200, START_ANGLE, END_ANGLE)}
           stroke="#333"
@@ -179,6 +180,7 @@ function Gauge({ value, max, redZoneStart }) {
           fill="none"
         />
 
+        {/* Red zone */}
         <path
           d={describeArc(
             250,
@@ -187,11 +189,32 @@ function Gauge({ value, max, redZoneStart }) {
             START_ANGLE + (redZoneStart / max) * (END_ANGLE - START_ANGLE),
             END_ANGLE,
           )}
-          stroke="url(#redGrad)"
+          stroke={`url(#grad-${label})`}
           strokeWidth="20"
           fill="none"
         />
 
+        {/* Ticks */}
+        {Array.from({ length: 9 }).map((_, i) => {
+          const a = START_ANGLE + (i / 8) * (END_ANGLE - START_ANGLE);
+
+          const outer = polarToCartesian(250, 250, 210, a);
+          const inner = polarToCartesian(250, 250, 180, a);
+
+          return (
+            <line
+              key={i}
+              x1={outer.x}
+              y1={outer.y}
+              x2={inner.x}
+              y2={inner.y}
+              stroke="#aaa"
+              strokeWidth="3"
+            />
+          );
+        })}
+
+        {/* Needle */}
         <line
           x1="250"
           y1="250"
@@ -203,8 +226,14 @@ function Gauge({ value, max, redZoneStart }) {
           style={{ filter: 'drop-shadow(0 0 12px red)' }}
         />
 
+        {/* Hub */}
         <circle cx="250" cy="250" r="18" fill="#111" />
       </svg>
+
+      <div className="absolute inset-0 flex flex-col items-center justify-center">
+        <div className="text-6xl font-mono">{Math.round(value)}</div>
+        <div className="text-gray-400 tracking-widest mt-2">{label}</div>
+      </div>
     </div>
   );
 }
