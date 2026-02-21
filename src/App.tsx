@@ -1,11 +1,39 @@
 import { useEffect, useRef, useState } from 'react';
 import { defaultGearSpeeds } from './gearbox';
 
+// Types
+
+type Point = { x: number; y: number };
+
+interface CenterDisplayProps {
+  gear: string;
+  speed: number;
+  fps: number;
+  frameTime: number;
+}
+
+interface TachometerProps {
+  gear: number | string;
+}
+
+interface SpeedometerProps {
+  setSpeed: (v: number) => void;
+  setFps: (v: number) => void;
+  setFrameTime: (v: number) => void;
+}
+
+interface GaugeProps {
+  label?: string;
+  value: number;
+  max: number;
+  redZoneStart: number;
+}
+
 /* ===========================
    SVG MATH HELPERS
 =========================== */
 
-function polarToCartesian(cx, cy, r, angleDeg) {
+function polarToCartesian(cx: number, cy: number, r: number, angleDeg: number): Point {
   const angleRad = (angleDeg - 90) * (Math.PI / 180);
   return {
     x: cx + r * Math.cos(angleRad),
@@ -13,7 +41,13 @@ function polarToCartesian(cx, cy, r, angleDeg) {
   };
 }
 
-function describeArc(cx, cy, r, startAngle, endAngle) {
+function describeArc(
+  cx: number,
+  cy: number,
+  r: number,
+  startAngle: number,
+  endAngle: number,
+): string {
   const start = polarToCartesian(cx, cy, r, endAngle);
   const end = polarToCartesian(cx, cy, r, startAngle);
   const largeArcFlag = endAngle - startAngle <= 180 ? '0' : '1';
@@ -61,7 +95,7 @@ export default function App() {
    CENTER DISPLAY
 =========================== */
 
-function CenterDisplay({ gear, speed, fps, frameTime }) {
+function CenterDisplay({ gear, speed, fps, frameTime }: CenterDisplayProps) {
   const [time, setTime] = useState(new Date());
 
   useEffect(() => {
@@ -95,12 +129,12 @@ function CenterDisplay({ gear, speed, fps, frameTime }) {
    RPM TACHOMETER
 =========================== */
 
-function Tachometer({ gear }) {
+function Tachometer({ gear }: TachometerProps) {
   const [value, setValue] = useState(0);
   const targetRef = useRef(0);
 
   useEffect(() => {
-    let frame;
+    let frame: number;
 
     const animate = () => {
       // Gear-dependent easing: lower gear = faster rev
@@ -140,16 +174,16 @@ function Tachometer({ gear }) {
    PERFORMANCE SPEEDOMETER
 =========================== */
 
-function Speedometer({ setSpeed, setFps, setFrameTime }) {
+function Speedometer({ setSpeed, setFps, setFrameTime }: SpeedometerProps) {
   const [value, setValue] = useState(0);
-  const frameTimes = useRef([]);
-  const lastTime = useRef(performance.now());
+  const frameTimes = useRef<number[]>([]);
+  const lastTime = useRef<number>(performance.now());
 
   useEffect(() => {
-    let frame;
+    let frame: number;
 
-    const measure = (now) => {
-      const delta = now - lastTime.current;
+    const measure = (now: number) => {
+      const delta: number = now - lastTime.current;
       lastTime.current = now;
 
       frameTimes.current.push(delta);
@@ -176,14 +210,14 @@ function Speedometer({ setSpeed, setFps, setFrameTime }) {
     return () => cancelAnimationFrame(frame);
   }, []);
 
-  return <Gauge value={value} max={320} redZoneStart={260} />;
+  return <Gauge value={value} max={320} redZoneStart={260} label={undefined} />;
 }
 
 /* ===========================
    GENERIC GAUGE COMPONENT
 =========================== */
 
-function Gauge({ label, value, max, redZoneStart }) {
+function Gauge({ label, value, max, redZoneStart }: GaugeProps) {
   const angle = START_ANGLE + (value / max) * (END_ANGLE - START_ANGLE);
 
   return (
