@@ -2,7 +2,6 @@ import { useEffect, useRef, useState } from 'react';
 import { defaultGearSpeeds } from './gearbox';
 
 // Types
-
 type Point = { x: number; y: number };
 
 interface CenterDisplayProps {
@@ -27,6 +26,7 @@ interface GaugeProps {
   value: number;
   max: number;
   redZoneStart: number;
+  indicatorsCount?: number;
 }
 
 /* ===========================
@@ -106,7 +106,7 @@ function CenterDisplay({ gear, speed, fps, frameTime }: CenterDisplayProps) {
   }, []);
 
   return (
-    <div className="w-[400px] text-center flex flex-col items-center justify-center">
+    <div className="w-[400px] text-center flex flex-col items-center justify-center mfd-outline">
       {/* Digital Speed */}
       <div className="text-8xl font-audi tracking-tight">{Math.round(speed)}</div>
       <div className="text-gray-400 text-xl tracking-widest mb-8">km/h</div>
@@ -151,14 +151,18 @@ function Tachometer({ gear }: TachometerProps) {
       // Map fractional seconds (0 to 59.999) to RPM (0 to 8000)
       const baseRpm = (fractionalSeconds / 60) * 7000 + 1000;
 
+      const flicker = 7;
       const noise =
         // 50 * Math.sin((fractionalSeconds * 2 * Math.PI) / 3) + // slow wave
-        (Math.random() - 0.5) * 20; // tiny random flicker
+        (Math.random() - 0.5) * flicker; // tiny random flicker
 
       targetRef.current = baseRpm + noise;
 
       // Smoothly approach target RPM
       setValue((prev) => prev + (targetRef.current - prev) * 0.05);
+
+      // Keep first two digits same
+      setValue(3500 + flicker + noise);
 
       frame = requestAnimationFrame(animate);
     };
@@ -217,11 +221,51 @@ function Speedometer({ setSpeed, setFps, setFrameTime }: SpeedometerProps) {
    GENERIC GAUGE COMPONENT
 =========================== */
 
-function Gauge({ label, value, max, redZoneStart }: GaugeProps) {
+function Gauge({ label, value, max, redZoneStart, indicatorsCount = 0 }: GaugeProps) {
   const angle = START_ANGLE + (value / max) * (END_ANGLE - START_ANGLE);
 
+  // Helper to decide state for an indicator: 'off' | 'yellow' | 'red'
+  const getLightState = (thresholdFraction: number) => {
+    if (value >= redZoneStart) return 'red';
+    if (value >= redZoneStart * thresholdFraction) return 'yellow';
+    return 'off';
+  };
+
+  // Compute symmetric offsets around center so indicators cluster around the middle
+  // and spread rate scales with the number of indicators.
+  const INDICATOR_RADIUS = 230; // px from center (500x500 viewBox)
+  const SPREAD_PER_STEP = 8; // degrees between adjacent indicators
+
+  const middle = (indicatorsCount - 1) / 2;
+
+  const indicatorItems = Array.from({ length: indicatorsCount }).map((_, i) => {
+    // offset is centered: e.g. for 5 -> [-2,-1,0,1,2]; for 4 -> [-1.5,-0.5,0.5,1.5]
+    const offset = i - middle;
+
+    // angle in degrees relative to vertical (0 = top)
+    const angleDeg = indicatorsCount === 1 ? 0 : offset * SPREAD_PER_STEP;
+
+    // thresholds increase with distance from center: center lights illuminate first
+    const maxExtra = indicatorsCount === 1 ? 0 : (indicatorsCount - 1) / 2;
+    const distanceFactor = maxExtra === 0 ? 0 : Math.abs(offset) / maxExtra; // 0..1
+    const thresholdFraction = 0.5 + distanceFactor * 0.45; // 0.5 -> 0.95 from center -> edge
+
+    const state = getLightState(thresholdFraction);
+    const pos = polarToCartesian(250, 250, INDICATOR_RADIUS, angleDeg);
+    const size = 16;
+
+    return (
+      <div
+        key={`ind-${i}`}
+        className={`indicator indicator-abs ${state}`}
+        style={{ left: `${pos.x}px`, top: `${pos.y}px`, width: size, height: size }}
+        aria-hidden
+      />
+    );
+  });
+
   return (
-    <div className="relative w-[500px] h-[500px]">
+    <div className="relative w-[500px] h-[500px] gauge-outline">
       <svg viewBox="0 0 500 500" className="w-full h-full">
         <defs>
           <linearGradient id={`grad-${label}`} x1="0%" y1="0%" x2="100%" y2="0%">
@@ -308,6 +352,9 @@ function Gauge({ label, value, max, redZoneStart }: GaugeProps) {
         {/* Hub */}
         <circle cx="250" cy="250" r="18" fill="#111" />
       </svg>
+
+      {/* Curved indicator lights positioned along the top arc */}
+      {indicatorItems}
 
       <div className="absolute inset-0 flex flex-col items-center justify-center">
         <div className="text-6xl font-mono">{Math.round(value)}</div>
