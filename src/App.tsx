@@ -22,7 +22,7 @@ export default function App() {
   return (
     <div className="h-screen w-screen flex items-center justify-center bg-gradient-to-b from-[#0a0a0a] via-[#111] to-black text-white">
       <div className="w-[1600px] h-[600px] rounded-3xl bg-gradient-to-b from-[#1b1b1b] to-[#0d0d0d] shadow-[0_40px_160px_rgba(0,0,0,0.9)] p-12 flex items-center justify-between">
-        <Tachometer gear={gear} />
+        <Tachometer gear={currentGear} />
 
         <CentralDisplay gear={currentGear} speed={speed} fps={fps} frameTime={frameTime} />
 
